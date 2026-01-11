@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getUsers, createUser, updateUser, deleteUser } from '@/actions/users'
+import { Loader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -192,7 +193,7 @@ export default function UsersPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-8 text-center text-gray-500">Loading users...</div>
+            <div className="py-8"><Loader text="Loading users..." /></div>
           ) : users.length === 0 ? (
             <div className="py-8 text-center text-gray-500">No users found</div>
           ) : (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getBookings, deleteBooking, updateBookingStatus } from '@/actions/bookings'
+import { Loader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -228,7 +229,7 @@ export default function BookingsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-8 text-center text-gray-500">Loading bookings...</div>
+            <div className="py-8"><Loader text="Loading bookings..." /></div>
           ) : filteredBookings.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
               No bookings found.{' '}

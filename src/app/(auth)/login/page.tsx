@@ -64,7 +64,7 @@ export default function LoginPage() {
               </svg>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Padel Inventory</CardTitle>
+          <CardTitle className="text-2xl font-bold">Padel Bridge 1</CardTitle>
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>

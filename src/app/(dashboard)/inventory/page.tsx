@@ -12,6 +12,7 @@ import {
   updateCategory,
   deleteCategory,
 } from '@/actions/inventory'
+import { Loader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -488,7 +489,7 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-8 text-center text-gray-500">Loading inventory...</div>
+            <div className="py-8"><Loader text="Loading inventory..." /></div>
           ) : filteredItems.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
               {searchQuery ? `No items found for "${searchQuery}"` : 'No items found'}

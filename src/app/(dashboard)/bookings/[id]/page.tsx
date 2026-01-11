@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { getBooking, updateBookingStatus, addExtraHours } from '@/actions/bookings'
 import { getInventoryItems } from '@/actions/inventory'
 import { addSaleToBooking, removeSaleFromBooking } from '@/actions/sales'
+import { Loader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -183,7 +184,7 @@ export default function BookingDetailPage() {
   }
 
   if (isLoading) {
-    return <div className="py-8 text-center text-gray-500">Loading booking...</div>
+    return <div className="min-h-[400px] flex items-center justify-center"><Loader size="lg" text="Loading booking..." /></div>
   }
 
   if (!booking) {

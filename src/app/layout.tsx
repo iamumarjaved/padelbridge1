@@ -9,7 +9,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Padel Inventory",
+  title: "Padel Bridge 1",
   description: "Inventory and booking cost management for padel courts",
 }
 
