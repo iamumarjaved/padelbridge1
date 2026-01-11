@@ -113,9 +113,12 @@ export async function createBooking(formData: FormData) {
     return { error: validatedData.error.errors[0].message }
   }
 
+  const courtId = formData.get('courtId') as string || undefined
+
   const booking = await prisma.booking.create({
     data: {
       ...validatedData.data,
+      courtId,
       date: new Date(validatedData.data.date),
       createdById: session.user.id,
     },

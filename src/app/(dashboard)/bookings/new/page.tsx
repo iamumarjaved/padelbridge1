@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBooking } from '@/actions/bookings'
+import { getActiveCourts } from '@/actions/courts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,15 +19,55 @@ import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
+type Court = {
+  id: string
+  name: string
+  courtNumber: number
+  basePrice: number
+}
+
 export default function NewBookingPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [courts, setCourts] = useState<Court[]>([])
+  const [selectedCourtId, setSelectedCourtId] = useState<string>('')
+  const [basePrice, setBasePrice] = useState<string>('')
+
+  useEffect(() => {
+    loadCourts()
+  }, [])
+
+  async function loadCourts() {
+    const data = await getActiveCourts()
+    setCourts(data)
+    if (data.length > 0) {
+      // Select first court by default
+      setSelectedCourtId(data[0].id)
+      setBasePrice(data[0].basePrice.toString())
+    }
+  }
+
+  function handleCourtChange(courtId: string) {
+    setSelectedCourtId(courtId)
+    const court = courts.find(c => c.id === courtId)
+    if (court) {
+      setBasePrice(court.basePrice.toString())
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsSubmitting(true)
 
     const formData = new FormData(e.currentTarget)
+
+    // Add court information
+    const court = courts.find(c => c.id === selectedCourtId)
+    if (court) {
+      formData.set('courtNumber', court.courtNumber.toString())
+      formData.set('courtId', court.id)
+    }
+
     const result = await createBooking(formData)
 
     if (result.error) {
@@ -85,18 +126,30 @@ export default function NewBookingPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="courtNumber">Court Number *</Label>
-                <Select name="courtNumber" required>
+                <Label htmlFor="courtNumber">Select Court *</Label>
+                <Select value={selectedCourtId} onValueChange={handleCourtChange} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select court" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Court 1</SelectItem>
-                    <SelectItem value="2">Court 2</SelectItem>
-                    <SelectItem value="3">Court 3</SelectItem>
-                    <SelectItem value="4">Court 4</SelectItem>
+                    {courts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        No courts available. Add courts first.
+                      </div>
+                    ) : (
+                      courts.map((court) => (
+                        <SelectItem key={court.id} value={court.id}>
+                          {court.name} (Rs.{court.basePrice})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                {courts.length === 0 && (
+                  <p className="text-sm text-orange-600">
+                    <Link href="/courts" className="underline">Add courts</Link> to create bookings
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date *</Label>
@@ -139,6 +192,8 @@ export default function NewBookingPage() {
                 type="number"
                 step="0.01"
                 min="0"
+                value={basePrice}
+                onChange={(e) => setBasePrice(e.target.value)}
                 placeholder="50.00"
                 required
               />

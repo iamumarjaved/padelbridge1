@@ -12,12 +12,14 @@ import {
   Users,
   ChevronLeft,
   X,
+  Grid3x3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Bookings', href: '/bookings', icon: Calendar },
+  { name: 'Courts', href: '/courts', icon: Grid3x3 },
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Sales History', href: '/sales', icon: ShoppingCart },
 ]
