@@ -22,8 +22,8 @@ function toNumber(val: unknown): number {
 // Cache dashboard stats for 30 seconds
 const getCachedDashboardStats = unstable_cache(
   async (todayStr: string, tomorrowStr: string) => {
-    // Use just date format for booking dates (they're stored as YYYY-MM-DD)
-    // Use ISO datetime for Sale createdAt timestamps
+    // Use LIKE pattern for date comparison to handle both formats
+    // (2026-01-11T00:00:00.000Z and 2026-01-11T00:00:00+00:00)
     const todayISO = `${todayStr}T00:00:00.000Z`
     const tomorrowISO = `${tomorrowStr}T00:00:00.000Z`
 
@@ -35,7 +35,7 @@ const getCachedDashboardStats = unstable_cache(
       todayRevenue: bigint | number | null
     }>>(`
       SELECT
-        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
+        (SELECT COUNT(*) FROM Booking WHERE date LIKE '${todayStr}%') as todayBookings,
         (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
         (SELECT COUNT(*) FROM InventoryItem) as totalItems,
         (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayISO}' AND createdAt < '${tomorrowISO}') as todayRevenue
@@ -104,64 +104,20 @@ async function getDashboardData() {
   const todayStr = today.toISOString().split('T')[0]
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  // Fetch stats directly (no caching for now to debug)
-  const todayISO = `${todayStr}T00:00:00.000Z`
-  const tomorrowISO = `${tomorrowStr}T00:00:00.000Z`
-
-  const statsResult = await prisma.$queryRawUnsafe<Array<{
-    todayBookings: bigint | number
-    activeBookings: bigint | number
-    totalItems: bigint | number
-    todayRevenue: bigint | number | null
-  }>>(`
-    SELECT
-      (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
-      (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
-      (SELECT COUNT(*) FROM InventoryItem) as totalItems,
-      (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayISO}' AND createdAt < '${tomorrowISO}') as todayRevenue
-  `)
-  const row = statsResult[0]
-  const stats = {
-    todayBookings: toNumber(row?.todayBookings),
-    activeBookings: toNumber(row?.activeBookings),
-    totalItems: toNumber(row?.totalItems),
-    todayRevenue: toNumber(row?.todayRevenue)
-  }
-
-  const recentBookings = await prisma.booking.findMany({
-    take: 5,
-    orderBy: { createdAt: 'desc' },
-    include: { createdBy: true },
-  })
-
-  const lowStockResult = await prisma.$queryRawUnsafe<Array<{
-    id: string
-    name: string
-    quantity: bigint | number
-    minStock: bigint | number
-    categoryName: string
-  }>>(`
-    SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
-    FROM InventoryItem i
-    JOIN InventoryCategory c ON i.categoryId = c.id
-    WHERE i.quantity <= i.minStock
-    LIMIT 5
-  `)
-  const lowStockItems = lowStockResult.map(item => ({
-    id: item.id,
-    name: item.name,
-    quantity: toNumber(item.quantity),
-    minStock: toNumber(item.minStock),
-    categoryName: item.categoryName
-  }))
+  // Fetch all data in parallel with caching
+  const [stats, recentBookings, lowStockItems] = await Promise.all([
+    getCachedDashboardStats(todayStr, tomorrowStr),
+    getCachedRecentBookings(),
+    getCachedLowStockItems(),
+  ])
 
   return {
-    todayBookings: Number(stats.todayBookings) || 0,
-    activeBookings: Number(stats.activeBookings) || 0,
-    totalInventoryItems: Number(stats.totalItems) || 0,
+    todayBookings: stats.todayBookings,
+    activeBookings: stats.activeBookings,
+    totalInventoryItems: stats.totalItems,
     lowStockItems,
     recentBookings,
-    todayRevenue: Number(stats.todayRevenue) || 0,
+    todayRevenue: stats.todayRevenue,
   }
 }
 
