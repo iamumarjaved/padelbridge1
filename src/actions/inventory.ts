@@ -148,6 +148,7 @@ export async function createInventoryItem(formData: FormData) {
   })
 
   revalidatePath('/inventory')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
@@ -186,12 +187,14 @@ export async function updateInventoryItem(id: string, formData: FormData) {
   })
 
   revalidatePath('/inventory')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
 export async function deleteInventoryItem(id: string) {
   await prisma.inventoryItem.delete({ where: { id } })
   revalidatePath('/inventory')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
@@ -250,5 +253,6 @@ export async function adjustStock(itemId: string, formData: FormData) {
   ])
 
   revalidatePath('/inventory')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }

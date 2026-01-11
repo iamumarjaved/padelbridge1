@@ -112,6 +112,7 @@ export async function createBooking(formData: FormData) {
   })
 
   revalidatePath('/bookings')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true, bookingId: booking.id }
 }
 
@@ -146,6 +147,7 @@ export async function updateBooking(id: string, formData: FormData) {
 
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${id}`)
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
@@ -157,12 +159,14 @@ export async function updateBookingStatus(id: string, status: string) {
 
   revalidatePath('/bookings')
   revalidatePath(`/bookings/${id}`)
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
 export async function deleteBooking(id: string) {
   await prisma.booking.delete({ where: { id } })
   revalidatePath('/bookings')
+  revalidatePath('/') // Invalidate dashboard cache
   return { success: true }
 }
 
