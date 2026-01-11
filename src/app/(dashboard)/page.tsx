@@ -104,12 +104,56 @@ async function getDashboardData() {
   const todayStr = today.toISOString().split('T')[0]
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  // Fetch all data in parallel with caching
-  const [stats, recentBookings, lowStockItems] = await Promise.all([
-    getCachedDashboardStats(todayStr, tomorrowStr),
-    getCachedRecentBookings(),
-    getCachedLowStockItems(),
-  ])
+  // Fetch stats directly (no caching for now to debug)
+  const todayISO = `${todayStr}T00:00:00.000Z`
+  const tomorrowISO = `${tomorrowStr}T00:00:00.000Z`
+
+  const statsResult = await prisma.$queryRawUnsafe<Array<{
+    todayBookings: bigint | number
+    activeBookings: bigint | number
+    totalItems: bigint | number
+    todayRevenue: bigint | number | null
+  }>>(`
+    SELECT
+      (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
+      (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
+      (SELECT COUNT(*) FROM InventoryItem) as totalItems,
+      (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayISO}' AND createdAt < '${tomorrowISO}') as todayRevenue
+  `)
+  const row = statsResult[0]
+  const stats = {
+    todayBookings: toNumber(row?.todayBookings),
+    activeBookings: toNumber(row?.activeBookings),
+    totalItems: toNumber(row?.totalItems),
+    todayRevenue: toNumber(row?.todayRevenue)
+  }
+
+  const recentBookings = await prisma.booking.findMany({
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: { createdBy: true },
+  })
+
+  const lowStockResult = await prisma.$queryRawUnsafe<Array<{
+    id: string
+    name: string
+    quantity: bigint | number
+    minStock: bigint | number
+    categoryName: string
+  }>>(`
+    SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
+    FROM InventoryItem i
+    JOIN InventoryCategory c ON i.categoryId = c.id
+    WHERE i.quantity <= i.minStock
+    LIMIT 5
+  `)
+  const lowStockItems = lowStockResult.map(item => ({
+    id: item.id,
+    name: item.name,
+    quantity: toNumber(item.quantity),
+    minStock: toNumber(item.minStock),
+    categoryName: item.categoryName
+  }))
 
   return {
     todayBookings: Number(stats.todayBookings) || 0,
