@@ -22,7 +22,8 @@ function toNumber(val: unknown): number {
 // Cache dashboard stats for 30 seconds
 const getCachedDashboardStats = unstable_cache(
   async (todayStr: string, tomorrowStr: string) => {
-    // Use ISO datetime format for proper comparison
+    // Use just date format for booking dates (they're stored as YYYY-MM-DD)
+    // Use ISO datetime for Sale createdAt timestamps
     const todayISO = `${todayStr}T00:00:00.000Z`
     const tomorrowISO = `${tomorrowStr}T00:00:00.000Z`
 
@@ -34,7 +35,7 @@ const getCachedDashboardStats = unstable_cache(
       todayRevenue: bigint | number | null
     }>>(`
       SELECT
-        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayISO}' AND date < '${tomorrowISO}') as todayBookings,
+        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
         (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
         (SELECT COUNT(*) FROM InventoryItem) as totalItems,
         (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayISO}' AND createdAt < '${tomorrowISO}') as todayRevenue
