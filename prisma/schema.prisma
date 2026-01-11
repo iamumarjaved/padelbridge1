@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("STAFF") // ADMIN or STAFF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings          Booking[]
+  stockTransactions StockTransaction[]
+}
+
+model InventoryCategory {
+  id    String @id @default(cuid())
+  name  String
+  type  String // BEVERAGE_SNACK, EQUIPMENT_RENTAL, PRO_SHOP
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id         String   @id @default(cuid())
+  name       String
+  sku        String   @unique
+  quantity   Int      @default(0)
+  costPrice  Float
+  sellPrice  Float
+  minStock   Int      @default(5)
+  isRental   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  categoryId String
+  category   InventoryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  sales             Sale[]
+  stockTransactions StockTransaction[]
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  courtNumber     Int
+  customerName    String
+  customerPhone   String?
+  date            DateTime
+  startTime       String
+  endTime         String
+  basePrice       Float
+  extraHours      Float    @default(0)
+  extraHourPrice  Float    @default(0)
+  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  sales Sale[]
+}
+
+model Sale {
+  id        String   @id @default(cuid())
+  quantity  Int
+  unitPrice Float
+  total     Float
+  isRental  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+}
+
+model StockTransaction {
+  id        String   @id @default(cuid())
+  type      String   // IN, OUT, ADJUSTMENT
+  quantity  Int
+  notes     String?
+  createdAt DateTime @default(now())
+
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User @relation(fields: [createdById], references: [id])
+}
