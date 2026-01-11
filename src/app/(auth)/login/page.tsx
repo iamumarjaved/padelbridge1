@@ -80,7 +80,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="admin@padel.com"
+                placeholder="Enter your email"
                 required
                 disabled={isLoading}
                 className="h-11"
@@ -128,9 +128,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Demo credentials: admin@padel.com / admin123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
