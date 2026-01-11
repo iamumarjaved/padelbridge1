@@ -7,6 +7,64 @@ import { Calendar, Package, ShoppingCart, AlertTriangle, ArrowRight } from 'luci
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { unstable_cache } from 'next/cache'
+
+// Cache dashboard stats for 30 seconds
+const getCachedDashboardStats = unstable_cache(
+  async (todayStr: string, tomorrowStr: string) => {
+    // Single optimized query for all counts and aggregates
+    const stats = await prisma.$queryRawUnsafe<Array<{
+      todayBookings: number
+      activeBookings: number
+      totalItems: number
+      todayRevenue: number
+    }>>(`
+      SELECT
+        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
+        (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
+        (SELECT COUNT(*) FROM InventoryItem) as totalItems,
+        (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayStr}' AND createdAt < '${tomorrowStr}') as todayRevenue
+    `)
+    return stats[0] || { todayBookings: 0, activeBookings: 0, totalItems: 0, todayRevenue: 0 }
+  },
+  ['dashboard-stats'],
+  { revalidate: 30 } // Cache for 30 seconds
+)
+
+// Cache recent bookings for 30 seconds
+const getCachedRecentBookings = unstable_cache(
+  async () => {
+    return prisma.booking.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: { createdBy: true },
+    })
+  },
+  ['recent-bookings'],
+  { revalidate: 30 }
+)
+
+// Cache low stock items for 60 seconds (changes less frequently)
+const getCachedLowStockItems = unstable_cache(
+  async () => {
+    const items = await prisma.$queryRawUnsafe<Array<{
+      id: string
+      name: string
+      quantity: number
+      minStock: number
+      categoryName: string
+    }>>(`
+      SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
+      FROM InventoryItem i
+      JOIN InventoryCategory c ON i.categoryId = c.id
+      WHERE i.quantity <= i.minStock
+      LIMIT 5
+    `)
+    return items
+  },
+  ['low-stock-items'],
+  { revalidate: 60 }
+)
 
 async function getDashboardData() {
   const today = new Date()
@@ -14,74 +72,23 @@ async function getDashboardData() {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  // Format dates for SQLite comparison
-  const todayStr = today.toISOString()
-  const tomorrowStr = tomorrow.toISOString()
+  const todayStr = today.toISOString().split('T')[0]
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  const [
-    todayBookings,
-    activeBookings,
-    totalInventoryItems,
-    recentBookings,
-    todaySales,
-  ] = await Promise.all([
-    prisma.booking.count({
-      where: {
-        date: {
-          gte: today,
-          lt: tomorrow,
-        },
-      },
-    }),
-    prisma.booking.count({
-      where: { status: 'ACTIVE' },
-    }),
-    prisma.inventoryItem.count(),
-    prisma.booking.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
-    }),
-    prisma.sale.aggregate({
-      where: {
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
-        },
-      },
-      _sum: { total: true },
-    }),
+  // Fetch all data in parallel with caching
+  const [stats, recentBookings, lowStockItems] = await Promise.all([
+    getCachedDashboardStats(todayStr, tomorrowStr),
+    getCachedRecentBookings(),
+    getCachedLowStockItems(),
   ])
 
-  // Get low stock items with raw query since Prisma doesn't support field comparison directly
-  // Using $queryRawUnsafe for LibSQL/Turso compatibility
-  let lowStockItems: Array<{
-    id: string
-    name: string
-    quantity: number
-    minStock: number
-    categoryName: string
-  }> = []
-
-  try {
-    lowStockItems = await prisma.$queryRawUnsafe(`
-      SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
-      FROM InventoryItem i
-      JOIN InventoryCategory c ON i.categoryId = c.id
-      WHERE i.quantity <= i.minStock
-      LIMIT 5
-    `)
-  } catch (e) {
-    console.error('Low stock query error:', e)
-  }
-
   return {
-    todayBookings,
-    activeBookings,
-    totalInventoryItems,
+    todayBookings: Number(stats.todayBookings) || 0,
+    activeBookings: Number(stats.activeBookings) || 0,
+    totalInventoryItems: Number(stats.totalItems) || 0,
     lowStockItems,
     recentBookings,
-    todayRevenue: todaySales._sum.total || 0,
+    todayRevenue: Number(stats.todayRevenue) || 0,
   }
 }
 
