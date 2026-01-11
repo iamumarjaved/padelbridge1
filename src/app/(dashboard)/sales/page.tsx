@@ -139,7 +139,7 @@ export default function SalesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${summary.totalTransactions > 0
+                Rs.{summary.totalTransactions > 0
                   ? (summary.totalRevenue / summary.totalTransactions).toFixed(2)
                   : '0.00'}
               </div>
