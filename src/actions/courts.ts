@@ -62,7 +62,7 @@ export async function createCourt(formData: FormData) {
     courtNumber: parseInt(formData.get('courtNumber') as string) || 0,
     basePrice: parseFloat(formData.get('basePrice') as string) || 0,
     description: formData.get('description') as string || undefined,
-    isActive: formData.get('isActive') === 'true',
+    isActive: formData.get('isActive') === 'on',
   }
 
   const validatedData = courtSchema.safeParse(rawData)
@@ -100,7 +100,7 @@ export async function updateCourt(id: string, formData: FormData) {
     courtNumber: parseInt(formData.get('courtNumber') as string) || 0,
     basePrice: parseFloat(formData.get('basePrice') as string) || 0,
     description: formData.get('description') as string || undefined,
-    isActive: formData.get('isActive') === 'true',
+    isActive: formData.get('isActive') === 'on',
   }
 
   const validatedData = courtSchema.safeParse(rawData)

@@ -6,8 +6,6 @@ import { Loader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -185,15 +183,14 @@ export default function CourtsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea
+                  <Input
                     id="description"
                     name="description"
                     placeholder="Optional court description..."
-                    rows={3}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch id="isActive" name="isActive" defaultChecked />
+                  <input type="checkbox" id="isActive" name="isActive" defaultChecked className="h-4 w-4 rounded border-gray-300" />
                   <Label htmlFor="isActive">Active (available for bookings)</Label>
                 </div>
               </div>
@@ -345,18 +342,20 @@ export default function CourtsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-description">Description</Label>
-                  <Textarea
+                  <Input
                     id="edit-description"
                     name="description"
                     defaultValue={selectedCourt.description || ''}
-                    rows={3}
+                    placeholder="Optional court description..."
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch
+                  <input
+                    type="checkbox"
                     id="edit-isActive"
                     name="isActive"
                     defaultChecked={selectedCourt.isActive}
+                    className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor="edit-isActive">Active (available for bookings)</Label>
                 </div>
