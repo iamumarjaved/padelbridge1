@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { unstable_cache } from 'next/cache'
 
+// Force dynamic rendering for auth
+export const dynamic = 'force-dynamic'
+
 // Cache dashboard stats for 30 seconds
 const getCachedDashboardStats = unstable_cache(
   async (todayStr: string, tomorrowStr: string) => {

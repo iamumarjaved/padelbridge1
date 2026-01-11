@@ -1,8 +1,14 @@
 {
   "regions": ["bom1"],
   "functions": {
-    "src/app/**/*.tsx": {
-      "maxDuration": 10
+    "app/**/*": {
+      "maxDuration": 10,
+      "memory": 1024
+    },
+    "api/**/*": {
+      "maxDuration": 10,
+      "memory": 1024
     }
-  }
+  },
+  "crons": []
 }
