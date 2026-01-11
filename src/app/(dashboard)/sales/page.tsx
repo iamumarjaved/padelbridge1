@@ -108,7 +108,7 @@ export default function SalesPage() {
               <DollarSign className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${summary.totalRevenue.toFixed(2)}</div>
+              <div className="text-2xl font-bold">Rs.{summary.totalRevenue.toFixed(2)}</div>
               <p className="text-xs text-gray-500 mt-1">
                 From {summary.totalTransactions} transactions
               </p>
@@ -180,7 +180,7 @@ export default function SalesPage() {
                     </div>
                   </div>
                   <span className="font-medium">
-                    ${(item._sum.total || 0).toFixed(2)}
+                    Rs.{(item._sum.total || 0).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -305,10 +305,10 @@ export default function SalesPage() {
                     </TableCell>
                     <TableCell className="text-center">{sale.quantity}</TableCell>
                     <TableCell className="text-right">
-                      ${sale.unitPrice.toFixed(2)}
+                      Rs.{sale.unitPrice.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${sale.total.toFixed(2)}
+                      Rs.{sale.total.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}

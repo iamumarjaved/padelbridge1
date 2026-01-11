@@ -341,11 +341,11 @@ export default function InventoryPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="costPrice">Cost Price ($)</Label>
+                      <Label htmlFor="costPrice">Cost Price (Rs.)</Label>
                       <Input id="costPrice" name="costPrice" type="number" step="0.01" min="0" defaultValue="0" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="sellPrice">Sell Price ($)</Label>
+                      <Label htmlFor="sellPrice">Sell Price (Rs.)</Label>
                       <Input id="sellPrice" name="sellPrice" type="number" step="0.01" min="0" defaultValue="0" required />
                     </div>
                   </div>
@@ -524,8 +524,8 @@ export default function InventoryPage() {
                         {item.category.name}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">${item.costPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${item.sellPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">Rs.{item.costPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">Rs.{item.sellPrice.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <span
                         className={
@@ -624,11 +624,11 @@ export default function InventoryPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-costPrice">Cost Price ($)</Label>
+                    <Label htmlFor="edit-costPrice">Cost Price (Rs.)</Label>
                     <Input id="edit-costPrice" name="costPrice" type="number" step="0.01" min="0" defaultValue={selectedItem.costPrice} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-sellPrice">Sell Price ($)</Label>
+                    <Label htmlFor="edit-sellPrice">Sell Price (Rs.)</Label>
                     <Input id="edit-sellPrice" name="sellPrice" type="number" step="0.01" min="0" defaultValue={selectedItem.sellPrice} required />
                   </div>
                 </div>

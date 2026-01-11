@@ -132,7 +132,7 @@ export default function NewBookingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="basePrice">Base Price ($) *</Label>
+              <Label htmlFor="basePrice">Base Price (Rs.) *</Label>
               <Input
                 id="basePrice"
                 name="basePrice"

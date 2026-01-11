@@ -278,7 +278,7 @@ export default function BookingsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${calculateTotal(booking).toFixed(2)}
+                      Rs.{calculateTotal(booking).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

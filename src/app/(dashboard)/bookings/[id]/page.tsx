@@ -312,24 +312,24 @@ export default function BookingDetailPage() {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-600">Base Price</span>
-              <span className="font-medium">${booking.basePrice.toFixed(2)}</span>
+              <span className="font-medium">Rs.{booking.basePrice.toFixed(2)}</span>
             </div>
             {booking.extraHours > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-600">
-                  Extra Hours ({booking.extraHours}h x ${booking.extraHourPrice})
+                  Extra Hours ({booking.extraHours}h x Rs.{booking.extraHourPrice})
                 </span>
-                <span className="font-medium">${extraTotal.toFixed(2)}</span>
+                <span className="font-medium">Rs.{extraTotal.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span className="text-gray-600">Items/Rentals</span>
-              <span className="font-medium">${salesTotal.toFixed(2)}</span>
+              <span className="font-medium">Rs.{salesTotal.toFixed(2)}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span>
-              <span>${grandTotal.toFixed(2)}</span>
+              <span>Rs.{grandTotal.toFixed(2)}</span>
             </div>
             {booking.status === 'ACTIVE' && (
               <Dialog open={isAddHoursOpen} onOpenChange={setIsAddHoursOpen}>
@@ -361,7 +361,7 @@ export default function BookingDetailPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="pricePerHour">Price per Hour ($)</Label>
+                        <Label htmlFor="pricePerHour">Price per Hour (Rs.)</Label>
                         <Input
                           id="pricePerHour"
                           name="pricePerHour"
@@ -437,7 +437,7 @@ export default function BookingDetailPage() {
                               <div className="flex items-center gap-2">
                                 <span>{item.name}</span>
                                 <span className="text-gray-500">
-                                  (${item.sellPrice.toFixed(2)})
+                                  (Rs.{item.sellPrice.toFixed(2)})
                                 </span>
                                 {!item.isRental && (
                                   <span className="text-xs text-gray-400">
@@ -459,7 +459,7 @@ export default function BookingDetailPage() {
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="font-medium">{selectedItem.name}</p>
                         <p className="text-sm text-gray-500">
-                          {selectedItem.category.name} • ${selectedItem.sellPrice.toFixed(2)}
+                          {selectedItem.category.name} • Rs.{selectedItem.sellPrice.toFixed(2)}
                         </p>
                         {!selectedItem.isRental && (
                           <p className="text-sm text-gray-500">
@@ -516,11 +516,11 @@ export default function BookingDetailPage() {
                       )}
                     </div>
                     <p className="text-sm text-gray-500">
-                      {sale.quantity} x ${sale.unitPrice.toFixed(2)}
+                      {sale.quantity} x Rs.{sale.unitPrice.toFixed(2)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-medium">${sale.total.toFixed(2)}</span>
+                    <span className="font-medium">Rs.{sale.total.toFixed(2)}</span>
                     {booking.status === 'ACTIVE' && (
                       <Button
                         variant="ghost"
