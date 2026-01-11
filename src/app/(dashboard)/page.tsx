@@ -14,11 +14,14 @@ async function getDashboardData() {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
+  // Format dates for SQLite comparison
+  const todayStr = today.toISOString()
+  const tomorrowStr = tomorrow.toISOString()
+
   const [
     todayBookings,
     activeBookings,
     totalInventoryItems,
-    lowStockItems,
     recentBookings,
     todaySales,
   ] = await Promise.all([
@@ -34,15 +37,6 @@ async function getDashboardData() {
       where: { status: 'ACTIVE' },
     }),
     prisma.inventoryItem.count(),
-    prisma.inventoryItem.findMany({
-      where: {
-        quantity: {
-          lte: prisma.inventoryItem.fields.minStock,
-        },
-      },
-      include: { category: true },
-      take: 5,
-    }),
     prisma.booking.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -60,25 +54,32 @@ async function getDashboardData() {
   ])
 
   // Get low stock items with raw query since Prisma doesn't support field comparison directly
-  const lowStockItemsRaw = await prisma.$queryRaw<Array<{
+  // Using $queryRawUnsafe for LibSQL/Turso compatibility
+  let lowStockItems: Array<{
     id: string
     name: string
     quantity: number
     minStock: number
     categoryName: string
-  }>>`
-    SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
-    FROM InventoryItem i
-    JOIN InventoryCategory c ON i.categoryId = c.id
-    WHERE i.quantity <= i.minStock
-    LIMIT 5
-  `
+  }> = []
+
+  try {
+    lowStockItems = await prisma.$queryRawUnsafe(`
+      SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
+      FROM InventoryItem i
+      JOIN InventoryCategory c ON i.categoryId = c.id
+      WHERE i.quantity <= i.minStock
+      LIMIT 5
+    `)
+  } catch (e) {
+    console.error('Low stock query error:', e)
+  }
 
   return {
     todayBookings,
     activeBookings,
     totalInventoryItems,
-    lowStockItems: lowStockItemsRaw,
+    lowStockItems,
     recentBookings,
     todayRevenue: todaySales._sum.total || 0,
   }
@@ -86,7 +87,22 @@ async function getDashboardData() {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
-  const data = await getDashboardData()
+
+  let data
+  try {
+    data = await getDashboardData()
+  } catch (error) {
+    console.error('Dashboard data error:', error)
+    // Return default values on error
+    data = {
+      todayBookings: 0,
+      activeBookings: 0,
+      totalInventoryItems: 0,
+      lowStockItems: [],
+      recentBookings: [],
+      todayRevenue: 0,
+    }
+  }
 
   return (
     <div className="space-y-6">
