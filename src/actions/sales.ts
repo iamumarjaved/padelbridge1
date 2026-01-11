@@ -109,87 +109,110 @@ export async function getSalesHistory(filters?: {
   dateFrom?: string
   dateTo?: string
 }) {
-  const where: Record<string, unknown> = {}
+  try {
+    const where: Record<string, unknown> = {}
 
-  if (filters?.dateFrom || filters?.dateTo) {
-    where.createdAt = {}
-    if (filters?.dateFrom) {
-      (where.createdAt as Record<string, Date>).gte = new Date(filters.dateFrom)
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.createdAt = {}
+      if (filters?.dateFrom) {
+        (where.createdAt as Record<string, Date>).gte = new Date(filters.dateFrom)
+      }
+      if (filters?.dateTo) {
+        const endDate = new Date(filters.dateTo)
+        endDate.setHours(23, 59, 59, 999)
+        ;(where.createdAt as Record<string, Date>).lte = endDate
+      }
     }
-    if (filters?.dateTo) {
-      const endDate = new Date(filters.dateTo)
-      endDate.setHours(23, 59, 59, 999)
-      ;(where.createdAt as Record<string, Date>).lte = endDate
-    }
+
+    return await prisma.sale.findMany({
+      where,
+      include: {
+        booking: {
+          select: {
+            customerName: true,
+            courtNumber: true,
+            date: true,
+          },
+        },
+        inventoryItem: {
+          select: {
+            name: true,
+            sku: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    console.error('getSalesHistory error:', error)
+    return []
   }
-
-  return prisma.sale.findMany({
-    where,
-    include: {
-      booking: {
-        select: {
-          customerName: true,
-          courtNumber: true,
-          date: true,
-        },
-      },
-      inventoryItem: {
-        select: {
-          name: true,
-          sku: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
 }
 
 export async function getSalesSummary(dateFrom?: string, dateTo?: string) {
-  const where: Record<string, unknown> = {}
-
-  if (dateFrom || dateTo) {
-    where.createdAt = {}
-    if (dateFrom) {
-      (where.createdAt as Record<string, Date>).gte = new Date(dateFrom)
-    }
-    if (dateTo) {
-      const endDate = new Date(dateTo)
-      endDate.setHours(23, 59, 59, 999)
-      ;(where.createdAt as Record<string, Date>).lte = endDate
-    }
+  // Build date filter for raw query
+  let dateFilter = ''
+  if (dateFrom && dateTo) {
+    dateFilter = `WHERE s.createdAt >= '${new Date(dateFrom).toISOString()}' AND s.createdAt <= '${new Date(dateTo + 'T23:59:59.999Z').toISOString()}'`
+  } else if (dateFrom) {
+    dateFilter = `WHERE s.createdAt >= '${new Date(dateFrom).toISOString()}'`
+  } else if (dateTo) {
+    dateFilter = `WHERE s.createdAt <= '${new Date(dateTo + 'T23:59:59.999Z').toISOString()}'`
   }
 
-  const [totalSales, salesCount, topItems] = await Promise.all([
-    prisma.sale.aggregate({
-      where,
-      _sum: { total: true },
-    }),
-    prisma.sale.count({ where }),
-    prisma.sale.groupBy({
-      by: ['inventoryItemId'],
-      where,
-      _sum: { quantity: true, total: true },
-      orderBy: { _sum: { total: 'desc' } },
-      take: 5,
-    }),
-  ])
+  try {
+    // Get totals
+    const totalsResult = await prisma.$queryRawUnsafe<Array<{
+      totalRevenue: number
+      totalTransactions: number
+    }>>(`
+      SELECT
+        COALESCE(SUM(total), 0) as totalRevenue,
+        COUNT(*) as totalTransactions
+      FROM Sale s
+      ${dateFilter}
+    `)
 
-  const topItemsWithNames = await Promise.all(
-    topItems.map(async (item) => {
-      const inventoryItem = await prisma.inventoryItem.findUnique({
-        where: { id: item.inventoryItemId },
-        select: { name: true },
-      })
-      return {
-        ...item,
-        name: inventoryItem?.name || 'Unknown',
-      }
-    })
-  )
+    // Get top items using raw query (groupBy with orderBy _sum not supported in LibSQL)
+    const topItemsResult = await prisma.$queryRawUnsafe<Array<{
+      inventoryItemId: string
+      name: string
+      totalQuantity: number
+      totalAmount: number
+    }>>(`
+      SELECT
+        s.inventoryItemId,
+        i.name,
+        SUM(s.quantity) as totalQuantity,
+        SUM(s.total) as totalAmount
+      FROM Sale s
+      JOIN InventoryItem i ON s.inventoryItemId = i.id
+      ${dateFilter ? dateFilter.replace('WHERE s.', 'WHERE s.') : ''}
+      GROUP BY s.inventoryItemId, i.name
+      ORDER BY totalAmount DESC
+      LIMIT 5
+    `)
 
-  return {
-    totalRevenue: totalSales._sum.total || 0,
-    totalTransactions: salesCount,
-    topItems: topItemsWithNames,
+    const totals = totalsResult[0] || { totalRevenue: 0, totalTransactions: 0 }
+
+    return {
+      totalRevenue: Number(totals.totalRevenue) || 0,
+      totalTransactions: Number(totals.totalTransactions) || 0,
+      topItems: topItemsResult.map(item => ({
+        inventoryItemId: item.inventoryItemId,
+        name: item.name,
+        _sum: {
+          quantity: Number(item.totalQuantity) || 0,
+          total: Number(item.totalAmount) || 0
+        },
+      })),
+    }
+  } catch (error) {
+    console.error('getSalesSummary error:', error)
+    return {
+      totalRevenue: 0,
+      totalTransactions: 0,
+      topItems: [],
+    }
   }
 }

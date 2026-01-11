@@ -28,55 +28,65 @@ export async function getBookings(filters?: {
   dateFrom?: string
   dateTo?: string
 }) {
-  const where: Record<string, unknown> = {}
+  try {
+    const where: Record<string, unknown> = {}
 
-  if (filters?.status) {
-    where.status = filters.status
-  }
-
-  if (filters?.dateFrom || filters?.dateTo) {
-    where.date = {}
-    if (filters?.dateFrom) {
-      (where.date as Record<string, Date>).gte = new Date(filters.dateFrom)
+    if (filters?.status) {
+      where.status = filters.status
     }
-    if (filters?.dateTo) {
-      (where.date as Record<string, Date>).lte = new Date(filters.dateTo)
-    }
-  }
 
-  return prisma.booking.findMany({
-    where,
-    include: {
-      createdBy: {
-        select: { name: true },
-      },
-      sales: {
-        include: {
-          inventoryItem: true,
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.date = {}
+      if (filters?.dateFrom) {
+        (where.date as Record<string, Date>).gte = new Date(filters.dateFrom)
+      }
+      if (filters?.dateTo) {
+        (where.date as Record<string, Date>).lte = new Date(filters.dateTo)
+      }
+    }
+
+    return await prisma.booking.findMany({
+      where,
+      include: {
+        createdBy: {
+          select: { name: true },
+        },
+        sales: {
+          include: {
+            inventoryItem: true,
+          },
         },
       },
-    },
-    orderBy: [{ date: 'desc' }, { startTime: 'desc' }],
-  })
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch (error) {
+    console.error('getBookings error:', error)
+    return []
+  }
 }
 
 export async function getBooking(id: string) {
-  return prisma.booking.findUnique({
-    where: { id },
-    include: {
-      createdBy: {
-        select: { name: true, email: true },
-      },
-      sales: {
-        include: {
-          inventoryItem: {
-            include: { category: true },
-          },
+  try {
+    return await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        createdBy: {
+          select: { name: true, email: true },
         },
-        orderBy: { createdAt: 'desc' },
+        sales: {
+          include: {
+            inventoryItem: {
+              include: { category: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('getBooking error:', error)
+    return null
+  }
 }
 
 export async function createBooking(formData: FormData) {

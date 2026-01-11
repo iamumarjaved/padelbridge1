@@ -29,14 +29,19 @@ const categorySchema = z.object({
 })
 
 export async function getCategories() {
-  return prisma.inventoryCategory.findMany({
-    orderBy: { name: 'asc' },
-    include: {
-      _count: {
-        select: { items: true }
+  try {
+    return await prisma.inventoryCategory.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: { items: true }
+        }
       }
-    }
-  })
+    })
+  } catch (error) {
+    console.error('getCategories error:', error)
+    return []
+  }
 }
 
 export async function createCategory(formData: FormData) {
@@ -96,11 +101,16 @@ export async function deleteCategory(id: string) {
 }
 
 export async function getInventoryItems(categoryId?: string) {
-  return prisma.inventoryItem.findMany({
-    where: categoryId ? { categoryId } : undefined,
-    include: { category: true },
-    orderBy: { name: 'asc' },
-  })
+  try {
+    return await prisma.inventoryItem.findMany({
+      where: categoryId ? { categoryId } : undefined,
+      include: { category: true },
+      orderBy: { name: 'asc' },
+    })
+  } catch (error) {
+    console.error('getInventoryItems error:', error)
+    return []
+  }
 }
 
 export async function getInventoryItem(id: string) {
