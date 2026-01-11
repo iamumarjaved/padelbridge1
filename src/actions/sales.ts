@@ -149,6 +149,13 @@ export async function getSalesHistory(filters?: {
   }
 }
 
+// Helper to convert BigInt values to numbers (SQLite raw queries return BigInt)
+function toNumber(val: unknown): number {
+  if (typeof val === 'bigint') return Number(val)
+  if (typeof val === 'number') return val
+  return Number(val) || 0
+}
+
 export async function getSalesSummary(dateFrom?: string, dateTo?: string) {
   // Build date filter for raw query
   let dateFilter = ''
@@ -163,8 +170,8 @@ export async function getSalesSummary(dateFrom?: string, dateTo?: string) {
   try {
     // Get totals
     const totalsResult = await prisma.$queryRawUnsafe<Array<{
-      totalRevenue: number
-      totalTransactions: number
+      totalRevenue: bigint | number | null
+      totalTransactions: bigint | number
     }>>(`
       SELECT
         COALESCE(SUM(total), 0) as totalRevenue,
@@ -177,8 +184,8 @@ export async function getSalesSummary(dateFrom?: string, dateTo?: string) {
     const topItemsResult = await prisma.$queryRawUnsafe<Array<{
       inventoryItemId: string
       name: string
-      totalQuantity: number
-      totalAmount: number
+      totalQuantity: bigint | number
+      totalAmount: bigint | number
     }>>(`
       SELECT
         s.inventoryItemId,
@@ -193,17 +200,18 @@ export async function getSalesSummary(dateFrom?: string, dateTo?: string) {
       LIMIT 5
     `)
 
-    const totals = totalsResult[0] || { totalRevenue: 0, totalTransactions: 0 }
+    const totals = totalsResult[0]
 
+    // Convert BigInt values to numbers for JSON serialization
     return {
-      totalRevenue: Number(totals.totalRevenue) || 0,
-      totalTransactions: Number(totals.totalTransactions) || 0,
+      totalRevenue: toNumber(totals?.totalRevenue),
+      totalTransactions: toNumber(totals?.totalTransactions),
       topItems: topItemsResult.map(item => ({
         inventoryItemId: item.inventoryItemId,
         name: item.name,
         _sum: {
-          quantity: Number(item.totalQuantity) || 0,
-          total: Number(item.totalAmount) || 0
+          quantity: toNumber(item.totalQuantity),
+          total: toNumber(item.totalAmount)
         },
       })),
     }

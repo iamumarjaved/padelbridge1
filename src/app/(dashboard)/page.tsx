@@ -12,23 +12,41 @@ import { unstable_cache } from 'next/cache'
 // Force dynamic rendering for auth
 export const dynamic = 'force-dynamic'
 
+// Helper to convert BigInt values to numbers (SQLite raw queries return BigInt)
+function toNumber(val: unknown): number {
+  if (typeof val === 'bigint') return Number(val)
+  if (typeof val === 'number') return val
+  return Number(val) || 0
+}
+
 // Cache dashboard stats for 30 seconds
 const getCachedDashboardStats = unstable_cache(
   async (todayStr: string, tomorrowStr: string) => {
+    // Use ISO datetime format for proper comparison
+    const todayISO = `${todayStr}T00:00:00.000Z`
+    const tomorrowISO = `${tomorrowStr}T00:00:00.000Z`
+
     // Single optimized query for all counts and aggregates
     const stats = await prisma.$queryRawUnsafe<Array<{
-      todayBookings: number
-      activeBookings: number
-      totalItems: number
-      todayRevenue: number
+      todayBookings: bigint | number
+      activeBookings: bigint | number
+      totalItems: bigint | number
+      todayRevenue: bigint | number | null
     }>>(`
       SELECT
-        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayStr}' AND date < '${tomorrowStr}') as todayBookings,
+        (SELECT COUNT(*) FROM Booking WHERE date >= '${todayISO}' AND date < '${tomorrowISO}') as todayBookings,
         (SELECT COUNT(*) FROM Booking WHERE status = 'ACTIVE') as activeBookings,
         (SELECT COUNT(*) FROM InventoryItem) as totalItems,
-        (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayStr}' AND createdAt < '${tomorrowStr}') as todayRevenue
+        (SELECT COALESCE(SUM(total), 0) FROM Sale WHERE createdAt >= '${todayISO}' AND createdAt < '${tomorrowISO}') as todayRevenue
     `)
-    return stats[0] || { todayBookings: 0, activeBookings: 0, totalItems: 0, todayRevenue: 0 }
+    const row = stats[0]
+    // Convert BigInt to Number for JSON serialization
+    return {
+      todayBookings: toNumber(row?.todayBookings),
+      activeBookings: toNumber(row?.activeBookings),
+      totalItems: toNumber(row?.totalItems),
+      todayRevenue: toNumber(row?.todayRevenue)
+    }
   },
   ['dashboard-stats'],
   { revalidate: 30 } // Cache for 30 seconds
@@ -53,8 +71,8 @@ const getCachedLowStockItems = unstable_cache(
     const items = await prisma.$queryRawUnsafe<Array<{
       id: string
       name: string
-      quantity: number
-      minStock: number
+      quantity: bigint | number
+      minStock: bigint | number
       categoryName: string
     }>>(`
       SELECT i.id, i.name, i.quantity, i.minStock, c.name as categoryName
@@ -63,7 +81,14 @@ const getCachedLowStockItems = unstable_cache(
       WHERE i.quantity <= i.minStock
       LIMIT 5
     `)
-    return items
+    // Convert BigInt values to numbers for JSON serialization
+    return items.map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: toNumber(item.quantity),
+      minStock: toNumber(item.minStock),
+      categoryName: item.categoryName
+    }))
   },
   ['low-stock-items'],
   { revalidate: 60 }
